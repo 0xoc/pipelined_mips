@@ -1,0 +1,2 @@
+BYTE_SIZE = 8  # bits
+WORD = 4 * BYTE_SIZE

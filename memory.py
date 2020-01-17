@@ -1,9 +1,10 @@
 from alu import ALU
+from decs import BYTE_SIZE, WORD
 
 
 class Memory:
 
-    def __init__(self, n, byte_size=8):
+    def __init__(self, n, byte_size=BYTE_SIZE, addr_size=WORD):
         """
         :param
             n: size of memory in bytes
@@ -11,13 +12,14 @@ class Memory:
         self.data = {}
         self.size = n
         self.byte_size = byte_size
+        self.addr_size = addr_size
 
         # initialize an array of memory with addresses starting from 0 to n - 1
         for i in range(n):
-            self.data[ALU.int_to_n_bit_binary(i, 32)] = ALU.int_to_n_bit_binary(0, byte_size)
+            self.data[ALU.int_to_n_bit_binary(32, addr_size)] = ALU.int_to_n_bit_binary(byte_size)
 
     def validate_addr(self, addr):
-        if type(addr) == tuple and len(addr) == 32:
+        if type(addr) == tuple and len(addr) == self.addr_size:
             pass
         elif addr in self.data.keys():
             pass

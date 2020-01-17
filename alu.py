@@ -1,4 +1,20 @@
+from decs import BYTE_SIZE, WORD
+
+
 class ALU:
+
+    def __init__(self, input_size=WORD, output_size=WORD):
+        self.input_size = input_size
+        self.output_size = output_size
+
+        self.result = 0
+        self.zero = True
+
+        self.op_table = {
+            '00': lambda a, b: a + b,
+            '01': lambda a, b: a * b,
+            '11': lambda a, b: a - b
+        }
 
     @staticmethod
     def validate_n_bit(number):
@@ -8,10 +24,18 @@ class ALU:
         :return:
         """
 
-        if type(number) == tuple and len(number) > 0:
-            pass
-        else:
+        if not (type(number) == tuple and len(number) > 0):
             raise Exception("Invalid n bit")
+
+    def validate_input(self, i):
+        """
+
+        :param i: input to be validated, tuple and input_size bits
+        :return:
+        """
+
+        if not (type(i) == tuple and len(i) == self.input_size):
+            raise Exception("Invalid Input")
 
     @staticmethod
     def twos(number):
@@ -40,8 +64,7 @@ class ALU:
         :param force_zero: if set sign bit will be set to 0
         :return: sign extended number
         """
-        if type(number) != tuple and len(number) <= 0:
-            raise Exception("Invalid number to sign extend")
+        ALU.validate_n_bit(number)
 
         if len(number) > n:
             raise Exception("Exceeded sign extend range")
@@ -56,7 +79,7 @@ class ALU:
         return tuple(sign_bits + list(number))
 
     @staticmethod
-    def int_to_n_bit_binary(i, n):
+    def int_to_n_bit_binary(i, n=WORD):
         """
         :param
             i: integer to be converted to a tuple of n bits
@@ -83,17 +106,10 @@ class ALU:
             bits += [r]
 
         bits.reverse()
-        extended = list(ALU.sign_extend_to(bits, n, force_zero=True))
+        extended = list(ALU.sign_extend_to(tuple(bits), n, force_zero=True))
 
         if is_negative:
             extended = ALU.twos(tuple(extended))
-
-            # this is overflow
-            if extended[0] != 1:
-                raise Exception("Overflow")
-        else:
-            if extended[0] != 0:
-                raise Exception("Overflow")
 
         return tuple(extended)
 
@@ -115,4 +131,20 @@ class ALU:
             return -decimal
         return decimal
 
+    def exc(self, input1, input2, op):
+        self.validate_input(input1)
+        self.validate_input(input2)
 
+        input1_decimal = self.n_bit_binary_to_decimal(input1)
+        input2_decimal = self.n_bit_binary_to_decimal(input2)
+
+        result_decimal = self.op_table[op](input1_decimal, input2_decimal)
+
+        if result_decimal == 0:
+            self.result = self.int_to_n_bit_binary(0, self.output_size)
+            self.zero = True
+
+        self.result = self.int_to_n_bit_binary(result_decimal, self.output_size)
+        self.zero = False
+
+        return self.result
