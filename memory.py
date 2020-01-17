@@ -1,7 +1,6 @@
 from alu import ALU
 from decs import BYTE_SIZE, WORD
 
-
 class Memory:
 
     def __init__(self, n, byte_size=BYTE_SIZE, addr_size=WORD):
