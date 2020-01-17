@@ -3,17 +3,18 @@ from alu import ALU
 
 class Memory:
 
-    def __init__(self, n):
+    def __init__(self, n, byte_size=8):
         """
         :param
             n: size of memory in bytes
         """
         self.data = {}
         self.size = n
+        self.byte_size = byte_size
 
         # initialize an array of memory with addresses starting from 0 to n - 1
         for i in range(n):
-            self.data[ALU.int_to_n_bit_binary(i, 32)] = ALU.int_to_n_bit_binary(0, 8)
+            self.data[ALU.int_to_n_bit_binary(i, 32)] = ALU.int_to_n_bit_binary(0, byte_size)
 
     def validate_addr(self, addr):
         if type(addr) == tuple and len(addr) == 32:
@@ -23,9 +24,8 @@ class Memory:
         else:
             raise Exception("Invalid addr")
 
-    @staticmethod
-    def validate_byte(byte):
-        if type(byte) == tuple and len(byte) == 8:
+    def validate_byte(self, byte):
+        if type(byte) == tuple and len(byte) == self.byte_size:
             pass
         else:
             raise Exception("Invalid byte")

@@ -1,6 +1,37 @@
 class ALU:
 
     @staticmethod
+    def validate_n_bit(number):
+        """
+        Ensures that "number" is a tuple of length more than 0
+        :param number:
+        :return:
+        """
+
+        if type(number) == tuple and len(number) > 0:
+            pass
+        else:
+            raise Exception("Invalid n bit")
+
+    @staticmethod
+    def twos(number):
+        """
+
+        :param number:
+        :return: two's complement of the number
+        """
+        ALU.validate_n_bit(number)
+
+        number = list(number)
+        seen_first_one = False
+        for i in range(len(number) - 1, -1, -1):
+            if number[i] == 1 and not seen_first_one:
+                seen_first_one = True
+            elif seen_first_one:
+                number[i] = number[i] ^ 1
+        return tuple(number)
+
+    @staticmethod
     def sign_extend_to(number, n, force_zero=False):
         """
 
@@ -51,27 +82,37 @@ class ALU:
             i = i // 2
             bits += [r]
 
-        if len(bits) > n:
-            raise Exception("Exceeded number of bits requested")
-
         bits.reverse()
         extended = list(ALU.sign_extend_to(bits, n, force_zero=True))
 
         if is_negative:
-            first_one_seen = False
-            for i in range(len(extended) - 1, -1, -1):
-                if extended[i] == 1 and not first_one_seen:
-                    first_one_seen = True
-                elif first_one_seen:
-                    extended[i] = extended[i] ^ 1
+            extended = ALU.twos(tuple(extended))
 
             # this is overflow
             if extended[0] != 1:
                 raise Exception("Overflow")
-
         else:
             if extended[0] != 0:
                 raise Exception("Overflow")
 
         return tuple(extended)
+
+    @staticmethod
+    def n_bit_binary_to_decimal(number):
+        ALU.validate_n_bit(number)
+
+        is_negative = False
+        # if number is negative
+        if number[0] == 1:
+            number = ALU.twos(number)
+            is_negative = True
+
+        decimal = 0
+        for i in number:
+            decimal = decimal * 2 + i
+
+        if is_negative:
+            return -decimal
+        return decimal
+
 
