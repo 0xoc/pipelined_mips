@@ -16,7 +16,7 @@ class Memory:
 
         # initialize an array of memory with addresses starting from 0 to n - 1
         for i in range(n):
-            self.data[ALU.int_to_n_bit_binary(32, addr_size)] = ALU.int_to_n_bit_binary(byte_size)
+            self.data[ALU.int_to_n_bit_binary(i, addr_size)] = ALU.int_to_n_bit_binary(0, byte_size)
 
         # read write addresses
         self._read_address = ALU.int_to_n_bit_binary(0, addr_size)
@@ -25,16 +25,17 @@ class Memory:
         self.read_result = ALU.int_to_n_bit_binary(0, byte_size)
         self._write_data = ALU.int_to_n_bit_binary(0, byte_size)
 
-        self.mem_read = False
-        self.mem_write = False
+        self._mem_read = False
+        self._mem_write = False
 
     def _exc(self):
         """
         runs at every clock
         :return:
         """
-        self.read()
+
         self.write()
+        self.read()
 
     def validate_addr(self, addr):
         """
@@ -42,6 +43,7 @@ class Memory:
         :param addr:
         :return:
         """
+
         if not (type(addr) == tuple and
                 len(addr) == self.addr_size and
                 addr in self.data.keys()
@@ -99,12 +101,22 @@ class Memory:
 
         self._exc()
 
+    def set_mem_read(self, mem_read):
+        self._mem_read = mem_read
+
+        self._exc()
+
+    def set_mem_write(self, mem_write):
+        self._mem_write = mem_write
+
+        self._exc()
+
     def read(self):
         """
         return memory content at read_address if mem_read is True
         :return:
         """
-        if self.mem_read:
+        if self._mem_read:
             self.read_result = self.at(self._read_address)
             return self.read_result
 
@@ -114,5 +126,5 @@ class Memory:
         :return:
         """
 
-        if self.mem_write:
+        if self._mem_write:
             self.put(self._write_address, self._write_data)

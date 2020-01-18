@@ -6,9 +6,7 @@ from decs import BYTE_SIZE, WORD
 
 def register_file_test():
     rg = RegisterFile()
-
     rg.reg_write = True
-
     i = 0
     for k in rg.data.keys():
 
@@ -27,10 +25,7 @@ def register_file_test():
         assert rg.read_d1 == rg.read_d2
 
         if i < 10:
-            try:
-                assert rg.read_d1 == ALU.int_to_n_bit_binary(i)
-            except:
-                print(i, rg.read_d1, ALU.int_to_n_bit_binary(i))
+            assert rg.read_d1 == ALU.int_to_n_bit_binary(i)
         else:
             assert rg.read_d1 == old_d1
 
@@ -38,7 +33,6 @@ def register_file_test():
 
 
 def alu_test():
-
     def get_decimal_result(alu):
         r = alu.result
         d = alu.n_bit_binary_to_decimal(r)
@@ -56,8 +50,30 @@ def alu_test():
     assert get_decimal_result(alu) == 8
 
 
-tests = []
-tests += [register_file_test, alu_test]
+def mem_test():
+
+    def mem_result_decimal(mem):
+        return ALU.n_bit_binary_to_decimal(mem.read_result)
+
+    mem = Memory(10)
+
+    mem.set_write_addr(ALU.int_to_n_bit_binary(0))
+    mem.set_write_data(ALU.int_to_n_bit_binary(5))
+
+    mem.set_mem_read(True)
+    mem.set_read_address(ALU.int_to_n_bit_binary(0))
+
+    assert mem_result_decimal(mem) == 0
+    mem.set_mem_read(False)
+    mem.set_mem_write(True)
+    assert mem_result_decimal(mem) == 0
+    mem.set_mem_read(True)
+    assert mem_result_decimal(mem) == 5
+
+
+tests = [register_file_test, alu_test, mem_test]
 
 for test in tests:
     test()
+    print("%s passed" % test.__name__)
+
