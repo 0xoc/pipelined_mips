@@ -9,8 +9,10 @@ EXC = '2'
 MEM = '3'
 WB = '4'
 
+
 class ControlUnit:
     pass
+
 
 class CPU:
 
@@ -22,42 +24,49 @@ class CPU:
         self._pc = ALU.int_to_n_bit_binary(0)
 
     def load_instructions(self, instructions):
+        """
+        load instructions from an array read from a file
+        this is a helper function to initialize the instruction memory
+        :param instructions:
+        :return:
+        """
+
         memory_cell_size = self._instruction_memory.byte_size
+
+        # times needed to access the memory to fetch one word
         n = WORD // memory_cell_size
 
+        # start putting instruction into memory from address 0
         base_addr = ALU.int_to_n_bit_binary(0)
-        self._alu.set_input_1(base_addr)
-        
+
         self._instruction_memory.set_mem_write(True)
 
-        for instruction in instructions:
-            inst = [int(c) for c in instruction.replace('\n','')]
+        for j in range(len(instructions)):
+            instruction = instructions[j]
+
+            inst = [int(c) for c in instruction.replace('\n', '')]
 
             for i in range(n):
-                
-                # caculate write addr
-                self._alu.set_input_2(ALU.int_to_n_bit_binary(i))
+                # calculate write addr
+                self._alu.set_input_1(base_addr)
+                self._alu.set_input_2(ALU.int_to_n_bit_binary(i + j*n))
                 self._alu.set_op('00')
                 addr = self._alu.result
 
                 # write data
-                unit_data = tuple(inst[i*memory_cell_size: (i+1) * memory_cell_size])
+                unit_data = tuple(inst[i * memory_cell_size: (i + 1) * memory_cell_size])
 
                 self._instruction_memory.set_write_addr(addr)
                 self._instruction_memory.set_write_data(unit_data)
 
-            self._alu.set_input_2(ALU.int_to_n_bit_binary(4))
-            self._alu.set_input_1(self._alu.result)
-
-
     def _load_w(self, mem, base_addr):
         n = WORD // mem.byte_size
-        
+
         self._alu.set_input_1(base_addr)
         self._alu.set_op('00')
-        
+
         word = []
-        
+
         for i in range(n):
             self._alu.set_input_2(ALU.int_to_n_bit_binary(i))
 
@@ -65,7 +74,7 @@ class CPU:
 
             self._instruction_memory.set_read_address(addr)
             word += list(self._instruction_memory.read_result)
-        
+
         return word
 
     def set_control_signals(self, stage):
@@ -93,6 +102,5 @@ class CPU:
         self._alu.set_op('00')
 
         self._pc = self._alu.result
-        
+
         return instruction
-        
