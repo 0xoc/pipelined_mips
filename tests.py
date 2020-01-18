@@ -6,12 +6,12 @@ from decs import BYTE_SIZE, WORD
 
 def register_file_test():
     rg = RegisterFile()
-    rg.reg_write = True
+    rg.set_register_write(True)
     i = 0
     for k in rg.data.keys():
 
         if i >= 10:
-            rg.reg_write = False
+            rg.set_register_write(False)
 
         rg.set_read_r1(k)
         rg.set_read_r2(k)

@@ -2,6 +2,7 @@
   <dictionary name="Sina">
     <words>
       <w>addr</w>
+      <w>dest</w>
     </words>
   </dictionary>
 </component>

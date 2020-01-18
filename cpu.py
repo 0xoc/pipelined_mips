@@ -2,6 +2,7 @@ from decs import BYTE_SIZE, WORD
 from memory import Memory
 from alu import ALU
 from register_file import RegisterFile
+from pipeline_consts import EX_CONTROL, MEM_CONTROL, WB_CONTROL, IF_ID
 
 FETCH = '0'
 DECODE = '1'
@@ -22,6 +23,17 @@ class CPU:
         self._register_file = RegisterFile(1024)
         self._alu = ALU()
         self._pc = ALU.int_to_n_bit_binary(0)
+
+        # pipe line registers
+        self._if_id = RegisterFile(count=2)
+        self._id_ex = RegisterFile(count=6)
+        self._ex_mem = RegisterFile(count=5)
+        self._mem_wb = RegisterFile(count=3)
+
+        # pipe line controls
+        self._ex_control = EX_CONTROL()
+        self._mem_control = MEM_CONTROL()
+        self._wb_control = WB_CONTROL()
 
     def load_instructions(self, instructions):
         """
@@ -49,7 +61,7 @@ class CPU:
             for i in range(n):
                 # calculate write addr
                 self._alu.set_input_1(base_addr)
-                self._alu.set_input_2(ALU.int_to_n_bit_binary(i + j*n))
+                self._alu.set_input_2(ALU.int_to_n_bit_binary(i + j * n))
                 self._alu.set_op('00')
                 addr = self._alu.result
 
@@ -77,24 +89,15 @@ class CPU:
 
         return word
 
-    def set_control_signals(self, stage):
-        if stage == FETCH:
-            self._instruction_memory.set_mem_read(True)
+    @staticmethod
+    def _bulk_register_set(register_file, data_dict):
+        register_file.set_register_write(True)
 
-        elif stage == DECODE:
-            pass
-        elif stage == EXC:
-            pass
-        elif stage == MEM:
-            pass
-        elif stage == WB:
-            pass
-        else:
-            raise Exception("Invalid stage")
+        for reg in data_dict.keys():
+            register_file.set_write_r(reg)
+            register_file.set_write_data(data_dict[reg])
 
     def fetch(self):
-        self.set_control_signals(FETCH)
-
         instruction = self._load_w(self._instruction_memory, self._pc)
 
         self._alu.set_input_1(self._pc)
@@ -103,4 +106,12 @@ class CPU:
 
         self._pc = self._alu.result
 
-        return instruction
+        self._bulk_register_set(self._if_id, {
+            IF_ID.PC: self._pc,
+            IF_ID.INST: tuple(instruction)
+        })
+
+        self._if_id.set_read_r1(IF_ID.INST)
+
+    def decode(self):
+        pass

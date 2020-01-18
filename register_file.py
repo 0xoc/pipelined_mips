@@ -11,7 +11,7 @@ class RegisterFile:
 
         # initialize registers
         for i in range(self.count):
-            self.data[ALU.int_to_n_bit_binary(i,5)] = ALU.int_to_n_bit_binary(0, WORD)
+            self.data[ALU.int_to_n_bit_binary(i, 5)] = ALU.int_to_n_bit_binary(0, register_size)
 
         # read registers
         self._read_r1 = ALU.int_to_n_bit_binary(0, 5)
@@ -22,7 +22,7 @@ class RegisterFile:
         self.read_d2 = ALU.int_to_n_bit_binary(0)
 
         # write enable and write register write data
-        self.reg_write = False
+        self._reg_write = False
         self._write_r = ALU.int_to_n_bit_binary(0, 5)
         self._write_data = ALU.int_to_n_bit_binary(0)
 
@@ -107,6 +107,11 @@ class RegisterFile:
 
         self._exc()
 
+    def set_register_write(self, reg_write):
+        self._reg_write = reg_write
+
+        self._exc()
+
     def read_data_x(self, x):
         """
         set read_x by content at read_x
@@ -128,5 +133,5 @@ class RegisterFile:
         return data
 
     def write(self):
-        if self.reg_write:
+        if self._reg_write:
             self.put(self._write_r, self._write_data)
