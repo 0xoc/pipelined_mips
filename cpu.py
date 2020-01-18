@@ -1,15 +1,22 @@
 from memory import Memory
 from alu import ALU
+from register_file import RegisterFile
 from decs import BYTE_SIZE, WORD
 
-alu = ALU()
-instruction_memory = Memory(1024)
-data_memory = Memory(1024)
+rg = RegisterFile()
 
-a = 45
-b = -46
+rg.reg_write = True
+rg.set_write_data(ALU.int_to_n_bit_binary(5))
 
-data_memory.put(ALU.int_to_n_bit_binary(32),
-      alu.exc(alu.int_to_n_bit_binary(a), alu.int_to_n_bit_binary(b), '00')
-      )
-print(ALU.n_bit_binary_to_decimal(data_memory.at(ALU.int_to_n_bit_binary(32, data_memory.addr_size))))
+i = 0
+for k in rg.data.keys():
+      rg.set_write_r(k)
+      rg.set_write_data(ALU.int_to_n_bit_binary(-i))
+
+      rg.set_read_r1(k)
+      rg.set_read_r2(k)
+
+      if rg.read_d1 == rg.read_d2:
+            print(rg.read_d1)
+
+      i += 1

@@ -27,8 +27,8 @@ class RegisterFile:
         self._write_data = ALU.int_to_n_bit_binary(0)
 
     def _exc(self):
-        self.read_data_x('1')
-        self.read_data_x('2')
+        self.read_data_x(1)
+        self.read_data_x(2)
         self.write()
 
     def validate_register(self, register):
@@ -37,8 +37,8 @@ class RegisterFile:
         :param register: validate the given register by type, length, and existence
         :return:
         """
+
         if not (type(register) == tuple and
-                len(register) == self.register_size and
                 register in self.data.keys()):
             raise Exception("Invalid register")
 
@@ -47,6 +47,7 @@ class RegisterFile:
         :param data: validate by type and length
         :return:
         """
+
         if not (type(data) == tuple and len(data) == self.register_size):
             raise Exception("Invalid register data")
 
@@ -85,7 +86,7 @@ class RegisterFile:
         self._exc()
 
     def set_write_r(self, register):
-        self.validate_data(register)
+        self.validate_register(register)
         self._write_r = register
 
         self._exc()
@@ -102,7 +103,10 @@ class RegisterFile:
         :return: data at read_x
         """
 
-        read_addr = self._read_r1 if x == 1 else self._read_r2
+        if x == 1:
+            read_addr = self._read_r1
+        else:
+            read_addr = self._read_r2
 
         data = self.at(read_addr)
 
