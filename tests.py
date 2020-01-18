@@ -55,10 +55,10 @@ def mem_test():
     def mem_result_decimal(mem):
         return ALU.n_bit_binary_to_decimal(mem.read_result)
 
-    mem = Memory(10)
+    mem = Memory(10, byte_size=BYTE_SIZE)
 
     mem.set_write_addr(ALU.int_to_n_bit_binary(0))
-    mem.set_write_data(ALU.int_to_n_bit_binary(5))
+    mem.set_write_data(ALU.int_to_n_bit_binary(5, BYTE_SIZE))
 
     mem.set_mem_read(True)
     mem.set_read_address(ALU.int_to_n_bit_binary(0))
