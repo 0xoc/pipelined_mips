@@ -12,5 +12,6 @@ cpu.load_instructions(instructions)
 
 cpu._instruction_memory.set_mem_read(True)
 
-print(cpu.fetch())
-print(cpu.fetch())
+
+while cpu.fetch():
+    print(cpu.decode())

@@ -20,7 +20,7 @@ class CPU:
     def __init__(self):
         self._instruction_memory = Memory(1024, byte_size=BYTE_SIZE)
         self._data_memory = Memory(1024, byte_size=BYTE_SIZE)
-        self._register_file = RegisterFile(1024)
+        self._register_file = RegisterFile(32)
         self._alu = ALU()
         self._pc = ALU.int_to_n_bit_binary(0)
 
@@ -113,5 +113,32 @@ class CPU:
 
         self._if_id.set_read_r1(IF_ID.INST)
 
+        # end of program
+        if instruction == list(ALU.int_to_n_bit_binary(-1)):
+            return False
+        return True
+
     def decode(self):
-        pass
+        self._if_id.set_read_r1(IF_ID.INST)
+        inst = list(self._if_id.read_d1)[::-1]
+
+        opcode = inst[31:25:-1]
+        opcode_decimal = ALU.n_bit_binary_to_decimal(tuple(opcode))
+
+        # if R type
+        if opcode_decimal == 0:
+            rs = inst[25:20:-1]
+            rt = inst[20:15:-1]
+            rd = inst[15:10:-1]
+            sh = inst[10:5:-1]
+            func = inst[5::-1]
+
+        # I type
+        elif opcode_decimal in [8, 12, 13, 4, 35, 43]:
+            rs = inst[25:20:-1]
+            rt = inst[20:15:-1]
+            imm = inst[15::-1]
+
+        # J
+        elif opcode_decimal == 2:
+            addr = inst[25::-1]
