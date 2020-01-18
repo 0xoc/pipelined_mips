@@ -2,7 +2,7 @@ from decs import BYTE_SIZE, WORD
 from memory import Memory
 from alu import ALU
 from register_file import RegisterFile
-from pipeline_consts import EX_CONTROL, MEM_CONTROL, WB_CONTROL, IF_ID
+from pipeline_consts import EX_CONTROL, MEM_CONTROL, WB_CONTROL, IF_ID, ID_EX
 
 FETCH = '0'
 DECODE = '1'
@@ -25,15 +25,20 @@ class CPU:
         self._pc = ALU.int_to_n_bit_binary(0)
 
         # pipe line registers
-        self._if_id = RegisterFile(count=2)
-        self._id_ex = RegisterFile(count=6)
+        self._if_id = IF_ID()
+        self._id_ex = ID_EX()
         self._ex_mem = RegisterFile(count=5)
         self._mem_wb = RegisterFile(count=3)
 
         # pipe line controls
-        self._ex_control = EX_CONTROL()
-        self._mem_control = MEM_CONTROL()
-        self._wb_control = WB_CONTROL()
+        self._id_ex_ex_control = EX_CONTROL()
+        self._id_ex_mem_control = MEM_CONTROL()
+        self._id_ex_wb_control = WB_CONTROL()
+
+        self._ex_mem_wb = WB_CONTROL()
+        self._ex_mem_m = MEM_CONTROL()
+
+        self._mem_wb_wb = WB_CONTROL()
 
     def load_instructions(self, instructions):
         """
@@ -106,12 +111,8 @@ class CPU:
 
         self._pc = self._alu.result
 
-        self._bulk_register_set(self._if_id, {
-            IF_ID.PC: self._pc,
-            IF_ID.INST: tuple(instruction)
-        })
-
-        self._if_id.set_read_r1(IF_ID.INST)
+        self._if_id.set_pc(self._pc)
+        self._if_id.set_inst(tuple(instruction))
 
         # end of program
         if instruction == list(ALU.int_to_n_bit_binary(-1)):
@@ -119,8 +120,8 @@ class CPU:
         return True
 
     def decode(self):
-        self._if_id.set_read_r1(IF_ID.INST)
-        inst = list(self._if_id.read_d1)[::-1]
+
+        inst = list(self._if_id.inst)[::-1]
 
         opcode = inst[31:25:-1]
         opcode_decimal = ALU.n_bit_binary_to_decimal(tuple(opcode))
@@ -133,6 +134,28 @@ class CPU:
             sh = inst[10:5:-1]
             func = inst[5::-1]
 
+            # read rs rt
+            self._register_file.set_read_r1(tuple(rs))
+            self._register_file.set_read_r2(tuple(rt))
+
+            # set registers
+            self._id_ex.set_pc(self._if_id.pc)
+            self._id_ex.set_rd1(self._register_file.read_d1)
+            self._id_ex.set_rd2(self._register_file.read_d2)
+            self._id_ex.set_inst_15_11(tuple(rd))
+
+            # set control signals
+            self._id_ex_ex_control.ALUOp = tuple(func)
+            self._id_ex_ex_control.ALUSource = 'rt'
+            self._id_ex_ex_control.RegDst = '11_15'
+
+            self._id_ex_mem_control.Branch = False
+            self._id_ex_mem_control.MemRead = False
+            self._id_ex_mem_control.MemWrite = False
+
+            self._id_ex_wb_control.MemToReg = False
+            self._id_ex_wb_control.RegWrite = True
+
         # I type
         elif opcode_decimal in [8, 12, 13, 4, 35, 43]:
             rs = inst[25:20:-1]
@@ -142,3 +165,19 @@ class CPU:
         # J
         elif opcode_decimal == 2:
             addr = inst[25::-1]
+
+    def execute(self):
+        self._alu.set_op(self._id_ex_ex_control.ALUOp)
+        self._alu.set_input_1(self._id_ex.rd1)
+
+        alu_source = self._id_ex_ex_control.ALUSource
+        if alu_source == 'rt':
+            input2 = self._id_ex.rd2
+        elif alu_source == 'imm':
+            input2 = self._id_ex.inst_15_0
+        else:
+            raise Exception("Invalid ALU source")
+
+        self._alu.set_input_2(input2)
+
+        return ALU.n_bit_binary_to_decimal(self._alu.result)

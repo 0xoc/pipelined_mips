@@ -13,7 +13,13 @@ class ALU:
         self.op_table = {
             '00': lambda a, b: a + b,
             '01': lambda a, b: a * b,
-            '11': lambda a, b: a - b
+            '11': lambda a, b: a - b,
+            34: lambda a, b: a - b,
+            32: lambda a, b: a + b,
+            24: lambda a, b: a * b,
+            26: lambda a, b: a // b,
+            36: lambda a, b: a & b,
+            37: lambda a, b: a | b,
         }
 
         self._input1 = ALU.int_to_n_bit_binary(0)
@@ -137,12 +143,12 @@ class ALU:
         return tuple(extended)
 
     @staticmethod
-    def n_bit_binary_to_decimal(number):
+    def n_bit_binary_to_decimal(number, signed=True):
         ALU.validate_n_bit(number)
 
         is_negative = False
         # if number is negative
-        if number[0] == 1:
+        if signed and number[0] == 1:
             number = ALU.twos(number)
             is_negative = True
 
@@ -167,8 +173,9 @@ class ALU:
         self._exc()
 
     def set_op(self, op):
+        if type(op) == tuple:
+            op = ALU.n_bit_binary_to_decimal(op, signed=False)
         if op not in self.op_table:
             raise Exception("Invalid ALU op code")
-
         self._op = op
         self._exc()
