@@ -16,6 +16,29 @@ class ALU:
             '11': lambda a, b: a - b
         }
 
+        self._input1 = ALU.int_to_n_bit_binary(0)
+        self._input2 = ALU.int_to_n_bit_binary(0)
+        self._op = '00'
+
+    def _exc(self):
+        input1 = self._input1
+        input2 = self._input2
+        op = self._op
+
+        input1_decimal = self.n_bit_binary_to_decimal(input1)
+        input2_decimal = self.n_bit_binary_to_decimal(input2)
+
+        result_decimal = self.op_table[op](input1_decimal, input2_decimal)
+
+        if result_decimal == 0:
+            self.result = self.int_to_n_bit_binary(0, self.output_size)
+            self.zero = True
+
+        self.result = self.int_to_n_bit_binary(result_decimal, self.output_size)
+        self.zero = False
+
+        return self.result
+
     @staticmethod
     def validate_n_bit(number):
         """
@@ -131,20 +154,21 @@ class ALU:
             return -decimal
         return decimal
 
-    def exc(self, input1, input2, op):
-        self.validate_input(input1)
-        self.validate_input(input2)
+    def set_input_1(self, input):
+        self.validate_input(input)
+        self._input1 = input
 
-        input1_decimal = self.n_bit_binary_to_decimal(input1)
-        input2_decimal = self.n_bit_binary_to_decimal(input2)
+        self._exc()
 
-        result_decimal = self.op_table[op](input1_decimal, input2_decimal)
+    def set_input_2(self, input):
+        self.validate_input(input)
+        self._input2 = input
 
-        if result_decimal == 0:
-            self.result = self.int_to_n_bit_binary(0, self.output_size)
-            self.zero = True
+        self._exc()
 
-        self.result = self.int_to_n_bit_binary(result_decimal, self.output_size)
-        self.zero = False
+    def set_op(self, op):
+        if op not in self.op_table:
+            raise Exception("Invalid ALU op code")
 
-        return self.result
+        self._op = op
+        self._exc()

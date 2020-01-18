@@ -27,9 +27,19 @@ class RegisterFile:
         self._write_data = ALU.int_to_n_bit_binary(0)
 
     def _exc(self):
+
+        """
+            to avoid structural hazard
+            first writing will happen
+            then reading
+        """
+
+        # first do the writing
+        self.write()
+
+        # the do the reads
         self.read_data_x(1)
         self.read_data_x(2)
-        self.write()
 
     def validate_register(self, register):
         """
