@@ -19,26 +19,42 @@ class Memory:
             self.data[ALU.int_to_n_bit_binary(32, addr_size)] = ALU.int_to_n_bit_binary(byte_size)
 
         # read write addresses
-        self.read_address = ALU.int_to_n_bit_binary(0, addr_size)
-        self.write_address = ALU.int_to_n_bit_binary(0, addr_size)
+        self._read_address = ALU.int_to_n_bit_binary(0, addr_size)
+        self._write_address = ALU.int_to_n_bit_binary(0, addr_size)
 
-        self.write_data = ALU.int_to_n_bit_binary(0, byte_size)
+        self.read_result = ALU.int_to_n_bit_binary(0, byte_size)
+        self._write_data = ALU.int_to_n_bit_binary(0, byte_size)
 
         self.mem_read = False
         self.mem_write = False
 
+    def _exc(self):
+        """
+        runs at every clock
+        :return:
+        """
+        self.read()
+        self.write()
+
     def validate_addr(self, addr):
-        if type(addr) == tuple and len(addr) == self.addr_size:
-            pass
-        elif addr in self.data.keys():
-            pass
-        else:
+        """
+        validate addr by type, length and existence
+        :param addr:
+        :return:
+        """
+        if not (type(addr) == tuple and
+                len(addr) == self.addr_size and
+                addr in self.data.keys()
+        ):
             raise Exception("Invalid addr")
 
     def validate_byte(self, byte):
-        if type(byte) == tuple and len(byte) == self.byte_size:
-            pass
-        else:
+        """
+        validate by type and length
+        :param byte:
+        :return:
+        """
+        if not (type(byte) == tuple and len(byte) == self.byte_size):
             raise Exception("Invalid byte")
 
     def at(self, addr):
@@ -50,14 +66,6 @@ class Memory:
         self.validate_addr(addr)
 
         return self.data[addr]
-
-    def read(self):
-        """
-        return memory content at read_address if mem_read is True
-        :return:
-        """
-        if self.mem_read:
-            return self.at(self.read_address)
 
     def put(self, addr, byte):
         """
@@ -73,6 +81,33 @@ class Memory:
 
         return byte
 
+    def set_read_address(self, addr):
+        self.validate_addr(addr)
+        self._read_address = addr
+
+        self._exc()
+
+    def set_write_addr(self, addr):
+        self.validate_addr(addr)
+        self._write_address = addr
+
+        self._exc()
+
+    def set_write_data(self, data):
+        self.validate_byte(data)
+        self._write_data = data
+
+        self._exc()
+
+    def read(self):
+        """
+        return memory content at read_address if mem_read is True
+        :return:
+        """
+        if self.mem_read:
+            self.read_result = self.at(self._read_address)
+            return self.read_result
+
     def write(self):
         """
         write write_data = write address if mem_write is True
@@ -80,4 +115,4 @@ class Memory:
         """
 
         if self.mem_write:
-            self.put(self.write_address, self.write_data)
+            self.put(self._write_address, self._write_data)
