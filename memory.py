@@ -4,7 +4,7 @@ from decs import BYTE_SIZE, WORD
 
 class Memory:
 
-    def __init__(self, n, byte_size=BYTE_SIZE, addr_size=WORD):
+    def __init__(self, n, byte_size=WORD, addr_size=WORD):
         """
         :param
             n: size of memory in bytes
@@ -17,6 +17,15 @@ class Memory:
         # initialize an array of memory with addresses starting from 0 to n - 1
         for i in range(n):
             self.data[ALU.int_to_n_bit_binary(32, addr_size)] = ALU.int_to_n_bit_binary(byte_size)
+
+        # read write addresses
+        self.read_address = ALU.int_to_n_bit_binary(0, addr_size)
+        self.write_address = ALU.int_to_n_bit_binary(0, addr_size)
+
+        self.write_data = ALU.int_to_n_bit_binary(0, byte_size)
+
+        self.mem_read = False
+        self.mem_write = False
 
     def validate_addr(self, addr):
         if type(addr) == tuple and len(addr) == self.addr_size:
@@ -42,6 +51,14 @@ class Memory:
 
         return self.data[addr]
 
+    def read(self):
+        """
+        return memory content at read_address if mem_read is True
+        :return:
+        """
+        if self.mem_read:
+            return self.at(self.read_address)
+
     def put(self, addr, byte):
         """
 
@@ -55,3 +72,12 @@ class Memory:
         self.data[addr] = byte
 
         return byte
+
+    def write(self):
+        """
+        write write_data = write address if mem_write is True
+        :return:
+        """
+
+        if self.mem_write:
+            self.put(self.write_address, self.write_data)
