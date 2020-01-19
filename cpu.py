@@ -1,3 +1,5 @@
+import copy
+
 from decs import BYTE_SIZE, WORD
 from memory import Memory
 from alu import ALU
@@ -35,10 +37,10 @@ class CPU:
         self._id_ex_mem_control = MEM_CONTROL()
         self._id_ex_wb_control = WB_CONTROL()
 
-        self._ex_mem_wb = WB_CONTROL()
-        self._ex_mem_m = MEM_CONTROL()
+        self._ex_mem_wb_control = WB_CONTROL()
+        self._ex_mem_m_control = MEM_CONTROL()
 
-        self._mem_wb_wb = WB_CONTROL()
+        self._mem_wb_wb_control = WB_CONTROL()
 
     def load_instructions(self, instructions):
         """
@@ -94,14 +96,6 @@ class CPU:
 
         return word
 
-    @staticmethod
-    def _bulk_register_set(register_file, data_dict):
-        register_file.set_register_write(True)
-
-        for reg in data_dict.keys():
-            register_file.set_write_r(reg)
-            register_file.set_write_data(data_dict[reg])
-
     def fetch(self):
         instruction = self._load_w(self._instruction_memory, self._pc)
 
@@ -119,51 +113,83 @@ class CPU:
             return False
         return True
 
+    def master_control_unit(self, op_code_decimal):
+        # memory signals
+        self._id_ex_mem_control.Branch = False
+        self._id_ex_mem_control.MemRead = False
+        self._id_ex_mem_control.MemWrite = False
+
+        # wb signals
+        self._id_ex_wb_control.MemToReg = False
+        self._id_ex_wb_control.RegWrite = True
+
+        if op_code_decimal == 35:
+            self._id_ex_mem_control.MemRead = True
+            self._id_ex_wb_control.MemToReg = True
+            self._id_ex_wb_control.RegWrite = True
+        elif op_code_decimal == 43:
+            self._id_ex_mem_control.MemWrite = True
+            self._id_ex_wb_control.RegWrite = False
+        elif op_code_decimal == 4:
+            self._id_ex_mem_control.Branch = False
+            self._id_ex_wb_control.RegWrite = False
+
     def decode(self):
 
+        I_TYPE = [8, 12, 13, 4, 35, 43]
+
         inst = list(self._if_id.inst)[::-1]
+        op_code = inst[31:25:-1]
+        op_code_decimal = ALU.n_bit_binary_to_decimal(tuple(op_code))
 
-        opcode = inst[31:25:-1]
-        opcode_decimal = ALU.n_bit_binary_to_decimal(tuple(opcode))
-
-        # if R type
-        if opcode_decimal == 0:
+        # common R type and I type stuff
+        if op_code_decimal == 0 or op_code_decimal in I_TYPE:
             rs = inst[25:20:-1]
             rt = inst[20:15:-1]
+
+            # read rt rs
+            self._register_file.set_read_r1(tuple(rs))
+            self._id_ex.set_rd1(self._register_file.read_d1)
+
+            self._register_file.set_read_r2(tuple(rt))
+            self._id_ex.set_rd2(self._register_file.read_d2)
+
+        # if R type
+        if op_code_decimal == 0:
+
             rd = inst[15:10:-1]
             sh = inst[10:5:-1]
             func = inst[5::-1]
 
-            # read rs rt
-            self._register_file.set_read_r1(tuple(rs))
-            self._register_file.set_read_r2(tuple(rt))
-
             # set registers
-            self._id_ex.set_pc(self._if_id.pc)
-            self._id_ex.set_rd1(self._register_file.read_d1)
-            self._id_ex.set_rd2(self._register_file.read_d2)
+
             self._id_ex.set_inst_15_11(tuple(rd))
 
-            # set control signals
+            # ex signals
             self._id_ex_ex_control.ALUOp = tuple(func)
             self._id_ex_ex_control.ALUSource = 'rt'
-            self._id_ex_ex_control.RegDst = '11_15'
-
-            self._id_ex_mem_control.Branch = False
-            self._id_ex_mem_control.MemRead = False
-            self._id_ex_mem_control.MemWrite = False
-
-            self._id_ex_wb_control.MemToReg = False
-            self._id_ex_wb_control.RegWrite = True
+            self._id_ex_ex_control.RegDst = 'rd'
 
         # I type
-        elif opcode_decimal in [8, 12, 13, 4, 35, 43]:
-            rs = inst[25:20:-1]
-            rt = inst[20:15:-1]
+        elif op_code_decimal in I_TYPE:
             imm = inst[15::-1]
 
+            extended_imm = ALU.sign_extend_to(tuple(imm), WORD)
+            self._id_ex.set_inst_15_0(extended_imm)
+
+            # ex signals
+            self._id_ex_ex_control.ALUOp = ALU.alu_i_type_op_code_table()[op_code_decimal]
+
+            if op_code_decimal == 4:
+                s = 'rt'
+            else:
+                s = 'imm'
+
+            self._id_ex_ex_control.ALUSource = s
+            self._id_ex_ex_control.RegDst = 'rt'
+
         # J
-        elif opcode_decimal == 2:
+        elif op_code_decimal == 2:
             addr = inst[25::-1]
 
     def execute(self):
@@ -171,6 +197,8 @@ class CPU:
         self._alu.set_input_1(self._id_ex.rd1)
 
         alu_source = self._id_ex_ex_control.ALUSource
+
+        # set the correct alu source
         if alu_source == 'rt':
             input2 = self._id_ex.rd2
         elif alu_source == 'imm':
@@ -179,5 +207,26 @@ class CPU:
             raise Exception("Invalid ALU source")
 
         self._alu.set_input_2(input2)
+        alu_result = self._alu.result  # *** #
+        alu_is_zero = self._alu.zero  # *** #
 
-        return ALU.n_bit_binary_to_decimal(self._alu.result)
+        # calculate possible beq addr
+        self._alu.set_input_1(self._id_ex.pc)
+        self._alu.set_input_2(
+            ALU.int_to_n_bit_binary(
+                ALU.n_bit_binary_to_decimal(
+                    self._id_ex.inst_15_0
+                ) << 2
+            ))
+
+        add_result = self._alu.result  # *** #
+
+        if self._id_ex_ex_control.RegDst == 'rt':
+            reg_dest = self._id_ex.rd2  # *** #
+        elif self._id_ex_ex_control.RegDst == 'rd':
+            reg_des = self._id_ex.inst_15_11
+
+        # propagate wb m control signals
+        self._ex_mem_m_control = copy.deepcopy(self._id_ex_mem_control)
+
+        return ALU.n_bit_binary_to_decimal(alu_result)

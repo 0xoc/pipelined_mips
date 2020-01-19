@@ -3,6 +3,17 @@ from decs import BYTE_SIZE, WORD
 
 class ALU:
 
+    @staticmethod
+    def alu_i_type_op_code_table():
+        return {
+            8: ALU.int_to_n_bit_binary(32, 6),
+            12: ALU.int_to_n_bit_binary(36, 6),
+            13: ALU.int_to_n_bit_binary(37, 6),
+            4: ALU.int_to_n_bit_binary(34, 6),
+            35: ALU.int_to_n_bit_binary(32, 6),
+            43: ALU.int_to_n_bit_binary(32, 6)
+        }
+
     def __init__(self, input_size=WORD, output_size=WORD):
         self.input_size = input_size
         self.output_size = output_size
