@@ -4,7 +4,7 @@ from decs import BYTE_SIZE, WORD
 from memory import Memory
 from alu import ALU
 from register_file import RegisterFile
-from pipeline_consts import EX_CONTROL, MEM_CONTROL, WB_CONTROL, IF_ID, ID_EX, EX_MEM, MEM_WB
+from pipeline_consts import EX_CONTROL, MEM_CONTROL, WB_CONTROL, IF_ID, ID_EX, EX_MEM, MEM_WB, NOOP
 
 FETCH = '0'
 DECODE = '1'
@@ -20,17 +20,26 @@ class ControlUnit:
 class CPU:
 
     def __init__(self):
-        self._instruction_memory = Memory(32, byte_size=BYTE_SIZE)
+        self._instruction_memory = Memory(1024, byte_size=BYTE_SIZE)
         self._data_memory = Memory(32, byte_size=BYTE_SIZE)
         self._register_file = RegisterFile(32)
         self._alu = ALU()
         self._pc = ALU.int_to_n_bit_binary(0)
 
+        self._end = False
+
         # pipe line registers
         self._if_id = IF_ID()
+        self._if_id_tmp = IF_ID()
+
         self._id_ex = ID_EX()
+        self._id_ex_tmp = ID_EX()
+
         self._ex_mem = EX_MEM()
+        self._ex_mem_tmp = EX_MEM()
+
         self._mem_wb = MEM_WB()
+        self._mem_wb_tmp = MEM_WB()
 
     def load_instructions(self, instructions):
         """
@@ -113,26 +122,29 @@ class CPU:
 
     def master_control_unit(self, op_code_decimal):
         # memory signals
-        self._id_ex.mem_control.Branch = False
-        self._id_ex.mem_control.MemRead = False
+        self._id_ex_tmp.mem_control.Branch = False
+        self._id_ex_tmp.mem_control.MemRead = False
         self._id_ex.mem_control.MemWrite = False
 
         # wb signals
-        self._id_ex.wb_control.MemToReg = False
-        self._id_ex.wb_control.RegWrite = True
+        self._id_ex_tmp.wb_control.MemToReg = False
+        self._id_ex_tmp.wb_control.RegWrite = True
 
         if op_code_decimal == 35:
-            self._id_ex.mem_control.MemRead = True
-            self._id_ex.wb_control.MemToReg = True
-            self._id_ex.wb_control.RegWrite = True
+            self._id_ex_tmp.mem_control.MemRead = True
+            self._id_ex_tmp.wb_control.MemToReg = True
+            self._id_ex_tmp.wb_control.RegWrite = True
         elif op_code_decimal == 43:
-            self._id_ex.mem_control.MemWrite = True
-            self._id_ex.wb_control.RegWrite = False
+            self._id_ex_tmp.mem_control.MemWrite = True
+            self._id_ex_tmp.wb_control.RegWrite = False
         elif op_code_decimal == 4:
-            self._id_ex.mem_control.Branch = False
-            self._id_ex.wb_control.RegWrite = False
+            self._id_ex_tmp.mem_control.Branch = False
+            self._id_ex_tmp.wb_control.RegWrite = False
 
     def fetch(self):
+
+        self._if_id = copy.deepcopy(self._if_id_tmp)
+
         instruction = self._load_w(self._instruction_memory, self._pc)
 
         self._alu.set_input_1(self._pc)
@@ -141,19 +153,27 @@ class CPU:
 
         self._pc = self._alu.result
 
-        self._if_id.set_pc(self._pc)
-        self._if_id.set_inst(tuple(instruction))
-
         # end of program
         if instruction == list(ALU.int_to_n_bit_binary(-1)):
-            return False
+            self._end = True
+
+        if self._end:
+            instruction = NOOP
+            self._if_id_tmp.set_inst(tuple(instruction))
+        else:
+            self._if_id_tmp.set_pc(self._pc)
+            self._if_id_tmp.set_inst(tuple(instruction))
+
         return True
 
     def decode(self):
+        self._id_ex = copy.deepcopy(self._id_ex_tmp)
+
+        pipeline_register = copy.deepcopy(self._if_id)
 
         I_TYPE = [8, 12, 13, 4, 35, 43]
 
-        inst = list(self._if_id.inst)[::-1]
+        inst = list(pipeline_register.inst)[::-1]
 
         op_code = inst[31:25:-1]
         op_code_decimal = ALU.n_bit_binary_to_decimal(tuple(op_code), signed=False)
@@ -167,12 +187,12 @@ class CPU:
 
             # read rt rs
             self._register_file.set_read_r1(tuple(rs))
-            self._id_ex.set_rd1(self._register_file.read_d1)
+            self._id_ex_tmp.set_rd1(self._register_file.read_d1)
 
             self._register_file.set_read_r2(tuple(rt))
-            self._id_ex.set_rd2(self._register_file.read_d2)
+            self._id_ex_tmp.set_rd2(self._register_file.read_d2)
 
-            self._id_ex.set_inst_20_16(tuple(rt))
+            self._id_ex_tmp.set_inst_20_16(tuple(rt))
 
         # if R type
         if op_code_decimal == 0:
@@ -183,48 +203,55 @@ class CPU:
 
             # set registers
 
-            self._id_ex.set_inst_15_11(tuple(rd))
+            self._id_ex_tmp.set_inst_15_11(tuple(rd))
 
             # ex signals
-            self._id_ex.ex_control.ALUOp = tuple(func)
-            self._id_ex.ex_control.ALUSource = 'rt'
-            self._id_ex.ex_control.RegDst = 'rd'
+            self._id_ex_tmp.ex_control.ALUOp = tuple(func)
+            self._id_ex_tmp.ex_control.ALUSource = 'rt'
+            self._id_ex_tmp.ex_control.RegDst = 'rd'
 
         # I type
         elif op_code_decimal in I_TYPE:
             imm = inst[15::-1]
 
             extended_imm = ALU.sign_extend_to(tuple(imm), WORD)
-            self._id_ex.set_inst_15_0(extended_imm)
+            self._id_ex_tmp.set_inst_15_0(extended_imm)
 
             # ex signals
-            self._id_ex.ex_control.ALUOp = ALU.alu_i_type_op_code_table()[op_code_decimal]
+            self._id_ex_tmp.ex_control.ALUOp = ALU.alu_i_type_op_code_table()[op_code_decimal]
 
             if op_code_decimal == 4:
                 s = 'rt'
             else:
                 s = 'imm'
 
-            self._id_ex.ex_control.ALUSource = s
-            self._id_ex.ex_control.RegDst = 'rt'
+            self._id_ex_tmp.ex_control.ALUSource = s
+            self._id_ex_tmp.ex_control.RegDst = 'rt'
 
         # J
         elif op_code_decimal == 2:
             addr = inst[25::-1]
 
-    def execute(self):
-        self._alu.set_op(self._id_ex.ex_control.ALUOp)
-        self._alu.set_input_1(self._id_ex.rd1)
+        self._id_ex_tmp.set_pc(pipeline_register.pc)
 
-        alu_source = self._id_ex.ex_control.ALUSource
+    def execute(self):
+
+        self._ex_mem = copy.deepcopy(self._ex_mem_tmp)
+
+        pipeline_register = copy.deepcopy(self._id_ex)
+
+        self._alu.set_op(pipeline_register.ex_control.ALUOp)
+        self._alu.set_input_1(pipeline_register.rd1)
+
+        alu_source = pipeline_register.ex_control.ALUSource
 
         # set the correct alu source
         if alu_source == 'rt':
-            input2 = self._id_ex.rd2
+            input2 = pipeline_register.rd2
         elif alu_source == 'imm':
-            input2 = self._id_ex.inst_15_0
+            input2 = pipeline_register.inst_15_0
         elif alu_source == 'rs':
-            input2 = self._id_ex.rd1
+            input2 = pipeline_register.rd1
         else:
             raise Exception("Invalid ALU source")
 
@@ -235,34 +262,36 @@ class CPU:
         alu_is_zero = self._alu.zero
 
         # calculate possible beq addr
-        self._alu.set_input_1(self._id_ex.pc)
+        self._alu.set_input_1(pipeline_register.pc)
         self._alu.set_input_2(
             ALU.int_to_n_bit_binary(
                 ALU.n_bit_binary_to_decimal(
-                    self._id_ex.inst_15_0
+                    pipeline_register.inst_15_0
                 ) << 2
             ))
 
         jump_target = self._alu.result
 
-        if self._id_ex.ex_control.RegDst == 'rt':
-            reg_dest = self._id_ex.inst_20_16
-        elif self._id_ex.ex_control.RegDst == 'rd':
-            reg_dest = self._id_ex.inst_15_11
+        if pipeline_register.ex_control.RegDst == 'rt':
+            reg_dest = pipeline_register.inst_20_16
+        elif pipeline_register.ex_control.RegDst == 'rd':
+            reg_dest = pipeline_register.inst_15_11
 
         # propagate wb m control signals
-        self._ex_mem.mem_control = copy.deepcopy(self._id_ex.mem_control)
-        self._ex_mem.wb_control = copy.deepcopy(self._id_ex.wb_control)
+        self._ex_mem_tmp.mem_control = copy.deepcopy(pipeline_register.mem_control)
+        self._ex_mem_tmp.wb_control = copy.deepcopy(pipeline_register.wb_control)
 
-        self._ex_mem.set_alu_result(alu_result)
-        self._ex_mem.set_alu_zero_flag(alu_is_zero)
-        self._ex_mem.set_jump_target(jump_target)
-        self._ex_mem.set_rd2(self._id_ex.rd2)
-        self._ex_mem.set_reg_dest(reg_dest)
+        self._ex_mem_tmp.set_alu_result(alu_result)
+        self._ex_mem_tmp.set_alu_zero_flag(alu_is_zero)
+        self._ex_mem_tmp.set_jump_target(jump_target)
+        self._ex_mem_tmp.set_rd2(pipeline_register.rd2)
+        self._ex_mem_tmp.set_reg_dest(reg_dest)
 
         # print("ALU RESULT:", ALU.n_bit_binary_to_decimal(alu_result))
 
     def memory(self):
+        self._mem_wb = copy.deepcopy(self._mem_wb_tmp)
+
         pipeline_data = copy.deepcopy(self._ex_mem)
 
         # todo: branch
@@ -270,10 +299,10 @@ class CPU:
         self._store_w(pipeline_data.alu_result, pipeline_data.rd2, pipeline_data.mem_control.MemWrite)
         read_result = self._load_w(self._data_memory, pipeline_data.alu_result, pipeline_data.mem_control.MemRead)
 
-        self._mem_wb.set_alu_result(pipeline_data.alu_result)
-        self._mem_wb.set_reg_dest(pipeline_data.reg_dest)
-        self._mem_wb.set_read_data(read_result)
-        self._mem_wb.wb_control = copy.deepcopy(pipeline_data.wb_control)
+        self._mem_wb_tmp.set_alu_result(pipeline_data.alu_result)
+        self._mem_wb_tmp.set_reg_dest(pipeline_data.reg_dest)
+        self._mem_wb_tmp.set_read_data(read_result)
+        self._mem_wb_tmp.wb_control = copy.deepcopy(pipeline_data.wb_control)
 
     def write_back(self):
         pipeline_data = copy.deepcopy(self._mem_wb)

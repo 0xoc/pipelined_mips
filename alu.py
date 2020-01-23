@@ -47,12 +47,12 @@ class ALU:
 
         result_decimal = self.op_table[op](input1_decimal, input2_decimal)
 
+        self.result = self.int_to_n_bit_binary(result_decimal, self.output_size)
+        self.zero = False
+
         if result_decimal == 0:
             self.result = self.int_to_n_bit_binary(0, self.output_size)
             self.zero = True
-
-        self.result = self.int_to_n_bit_binary(result_decimal, self.output_size)
-        self.zero = False
 
         return self.result
 
@@ -187,6 +187,7 @@ class ALU:
         if type(op) == tuple:
             op = ALU.n_bit_binary_to_decimal(op, signed=False)
         if op not in self.op_table:
+            print(op)
             raise Exception("Invalid ALU op code")
         self._op = op
         self._exc()

@@ -14,12 +14,13 @@ def validate_n_bit_tuple(c, n):
 def validate_word_tuple(c):
     validate_n_bit_tuple(c, WORD)
 
+NOOP = [int(c) for c in "00100000000000000000000000000000"]
 
 class IF_ID:
 
     def __init__(self):
         self.pc = ALU.int_to_n_bit_binary(0)
-        self.inst = ALU.int_to_n_bit_binary(-1)
+        self.inst = tuple(NOOP)
 
     def set_pc(self, pc):
         validate_word_tuple(pc)
