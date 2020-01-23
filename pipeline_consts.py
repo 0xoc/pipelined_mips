@@ -40,9 +40,9 @@ class ID_EX:
         self.rd2 = ALU.int_to_n_bit_binary(0)
         self.rs = ALU.int_to_n_bit_binary(0, 5)
         self.rt = ALU.int_to_n_bit_binary(0, 5)
-        self.inst_15_0 = ALU.int_to_n_bit_binary(0, 16)
+        self.inst_imm = ALU.int_to_n_bit_binary(0, 16)
         self.inst_20_16 = ALU.int_to_n_bit_binary(0, 5)
-        self.inst_15_11 = ALU.int_to_n_bit_binary(0, 5)
+        self.inst_rd = ALU.int_to_n_bit_binary(0, 5)
 
         self.wb_control = WB_CONTROL()
         self.mem_control = MEM_CONTROL()
@@ -68,22 +68,23 @@ class ID_EX:
         validate_word_tuple(rd2)
         self.rd2 = rd2
 
-    def set_inst_15_0(self, i):
+    def set_inst_imm(self, i):
         validate_n_bit_tuple(i, WORD)
-        self.inst_15_0 = i
+        self.inst_imm = i
 
     def set_inst_20_16(self, i):
         validate_n_bit_tuple(i, 5)
         self.inst_20_16 = i
 
-    def set_inst_15_11(self, i):
+    def set_inst_rd(self, i):
         validate_n_bit_tuple(i, 5)
-        self.inst_15_11 = i
+        self.inst_rd = i
 
 
 class EX_MEM:
 
     def __init__(self):
+        self.pc = 0
         self.jump_target = ALU.int_to_n_bit_binary(0)
         self.alu_zero_flag = True
         self.alu_result = ALU.int_to_n_bit_binary(0)
@@ -150,9 +151,9 @@ class WB_CONTROL:
 class MEM_CONTROL:
 
     def __init__(self):
-        self.Branch = 0
-        self.MemRead = 0
-        self.MemWrite = 0
+        self.Branch = False
+        self.MemRead = False
+        self.MemWrite = False
 
 
 class EX_CONTROL:
