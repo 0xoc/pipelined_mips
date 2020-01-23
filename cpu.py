@@ -113,8 +113,6 @@ class CPU:
             addr = self._alu.result
 
             byte = tuple(word[i * 8: 8 * (i + 1)])
-            print(byte)
-
             self._data_memory.set_mem_write(True)
             self._data_memory.set_address(addr)
             self._data_memory.set_write_data(byte)
@@ -142,7 +140,6 @@ class CPU:
         # wb signals
         self._id_ex_tmp.wb_control.MemToReg = False
         self._id_ex_tmp.wb_control.RegWrite = True
-
         if op_code_decimal == 35:
             self._id_ex_tmp.mem_control.MemRead = True
             self._id_ex_tmp.wb_control.MemToReg = True
@@ -158,7 +155,8 @@ class CPU:
 
         result = {
             'ForwardA': '00',
-            'ForwardB': '00'
+            'ForwardB': '00',
+            'ForwardS': '00',
         }
 
         # EX Hazard
@@ -220,6 +218,12 @@ class CPU:
         pipeline_register = copy.deepcopy(self._if_id)
 
         I_TYPE = [8, 12, 13, 4, 35, 43]
+
+        if list(pipeline_register.inst) == NOOP:
+            self._id_ex_tmp.mem_control.MemWrite = False
+            self._id_ex_tmp.wb_control.RegWrite = False
+
+            return
 
         inst = list(pipeline_register.inst)[::-1]
 
@@ -296,8 +300,6 @@ class CPU:
 
         fu_data = self.forwarding_unit()
 
-        print(fu_data)
-
         # input 1:
         # rd1
         # wb_result
@@ -319,6 +321,14 @@ class CPU:
         # ex_em alu result
 
         alu_source = pipeline_register.ex_control.ALUSource
+
+        # memory data forward
+        if fu_data['ForwardB'] == '00':
+            memory_data = pipeline_register.rd2
+        elif fu_data['ForwardB'] == '10':
+            memory_data = self._ex_mem.alu_result
+        elif fu_data['ForwardB'] == '01':
+            memory_data = self.write_back(ex=False)
 
         # set the correct alu source
         if alu_source == 'imm':
@@ -365,7 +375,7 @@ class CPU:
         self._ex_mem_tmp.set_alu_result(alu_result)
         self._ex_mem_tmp.set_alu_zero_flag(alu_is_zero)
         self._ex_mem_tmp.set_jump_target(jump_target)
-        self._ex_mem_tmp.set_rd2(input2)
+        self._ex_mem_tmp.set_rd2(memory_data)
         self._ex_mem_tmp.set_reg_dest(reg_dest)
 
         # print("ALU RESULT:", ALU.n_bit_binary_to_decimal(alu_result))

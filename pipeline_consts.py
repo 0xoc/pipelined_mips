@@ -14,7 +14,7 @@ def validate_n_bit_tuple(c, n):
 def validate_word_tuple(c):
     validate_n_bit_tuple(c, WORD)
 
-NOOP = [int(c) for c in "00100000000000000000000000000000"]
+NOOP = [int(c) for c in "00000000000000000000000000000000"]
 
 class IF_ID:
 
