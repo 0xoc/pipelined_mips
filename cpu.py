@@ -120,6 +120,19 @@ class CPU:
             self._data_memory.set_write_data(byte)
             self._data_memory.set_mem_write(False)
 
+    def cycle(self):
+        # pipe line register
+        self._if_id = copy.deepcopy(self._if_id_tmp)
+        self._id_ex = copy.deepcopy(self._id_ex_tmp)
+        self._ex_mem = copy.deepcopy(self._ex_mem_tmp)
+        self._mem_wb = copy.deepcopy(self._mem_wb_tmp)
+
+        self.fetch()
+        self.decode()
+        self.execute()
+        self.memory()
+        self.write_back()
+
     def master_control_unit(self, op_code_decimal):
         # memory signals
         self._id_ex_tmp.mem_control.Branch = False
@@ -142,27 +155,43 @@ class CPU:
             self._id_ex_tmp.wb_control.RegWrite = False
 
     def forwarding_unit(self):
-        result = {}
+
+        result = {
+            'ForwardA': '00',
+            'ForwardB': '00'
+        }
+
+        # EX Hazard
+        if (self._ex_mem.wb_control.RegWrite
+                and (self._ex_mem.reg_dest != ALU.int_to_n_bit_binary(0, 5))
+                and (self._ex_mem.reg_dest == self._id_ex.rs)):
+            result['ForwardA'] = '10'
+
+        if (self._ex_mem.wb_control.RegWrite
+                and (self._ex_mem.reg_dest != ALU.int_to_n_bit_binary(0, 5))
+                and (self._ex_mem.reg_dest == self._id_ex.rt)):
+            result['ForwardB'] = '10'
+
+        # memory hazard
         if (self._mem_wb.wb_control.RegWrite
                 and (self._mem_wb.reg_dest != ALU.int_to_n_bit_binary(0, 5))
                 and not (self._ex_mem.wb_control.RegWrite and (self._ex_mem.reg_dest != ALU.int_to_n_bit_binary(0, 5))
-                         and (self._ex_mem.reg_dest != self._id_ex.rs))
+                         and (self._ex_mem.reg_dest == self._id_ex.rs))
                 and (self._mem_wb.reg_dest == self._id_ex.rs)):
-            result['ForwardA'] = True
+            result['ForwardA'] = '01'
 
         if (self._mem_wb.wb_control.RegWrite
                 and (self._mem_wb.reg_dest != ALU.int_to_n_bit_binary(0, 5))
                 and not (self._ex_mem.wb_control.RegWrite and (self._ex_mem.reg_dest != ALU.int_to_n_bit_binary(0, 5))
-                         and (self._ex_mem.reg_dest != self._id_ex.rt))
+                         and (self._ex_mem.reg_dest == self._id_ex.rt))
                 and (self._mem_wb.reg_dest == self._id_ex.rt)):
-
-            result['ForwardB'] = True
+            result['ForwardB'] = '01'
 
         return result
 
     def fetch(self):
 
-        self._if_id = copy.deepcopy(self._if_id_tmp)
+        # self._if_id = copy.deepcopy(self._if_id_tmp)
 
         instruction = self._load_w(self._instruction_memory, self._pc)
 
@@ -186,7 +215,7 @@ class CPU:
         return True
 
     def decode(self):
-        self._id_ex = copy.deepcopy(self._id_ex_tmp)
+        # self._id_ex = copy.deepcopy(self._id_ex_tmp)
 
         pipeline_register = copy.deepcopy(self._if_id)
 
@@ -259,22 +288,51 @@ class CPU:
 
     def execute(self):
 
-        self._ex_mem = copy.deepcopy(self._ex_mem_tmp)
+        # self._ex_mem = copy.deepcopy(self._ex_mem_tmp)
 
         pipeline_register = copy.deepcopy(self._id_ex)
 
         self._alu.set_op(pipeline_register.ex_control.ALUOp)
-        self._alu.set_input_1(pipeline_register.rd1)
+
+        fu_data = self.forwarding_unit()
+
+        print(fu_data)
+
+        # input 1:
+        # rd1
+        # wb_result
+        # ex_em alu result
+        if fu_data['ForwardA'] == '00':
+            input1 = pipeline_register.rd1
+        elif fu_data['ForwardA'] == '10':
+            input1 = self._ex_mem.alu_result
+        elif fu_data['ForwardA'] == '01':
+            input1 = self.write_back(ex=False)
+        else:
+            raise Exception("Invalid input 1 ")
+
+        self._alu.set_input_1(input1)
+
+        # input 2:
+        # rt
+        # wb_result
+        # ex_em alu result
 
         alu_source = pipeline_register.ex_control.ALUSource
 
         # set the correct alu source
-        if alu_source == 'rt':
-            input2 = pipeline_register.rd2
-        elif alu_source == 'imm':
+        if alu_source == 'imm':
             input2 = pipeline_register.inst_15_0
-        elif alu_source == 'rs':
-            input2 = pipeline_register.rd1
+
+        elif fu_data['ForwardB'] == '00':
+            if alu_source == 'rt':
+                input2 = pipeline_register.rd2
+            elif alu_source == 'rs':
+                input2 = pipeline_register.rd1
+        elif fu_data['ForwardB'] == '10':
+            input2 = self._ex_mem.alu_result
+        elif fu_data['ForwardB'] == '01':
+            input2 = self.write_back(ex=False)
         else:
             raise Exception("Invalid ALU source")
 
@@ -313,7 +371,7 @@ class CPU:
         # print("ALU RESULT:", ALU.n_bit_binary_to_decimal(alu_result))
 
     def memory(self):
-        self._mem_wb = copy.deepcopy(self._mem_wb_tmp)
+        # self._mem_wb = copy.deepcopy(self._mem_wb_tmp)
 
         pipeline_data = copy.deepcopy(self._ex_mem)
 
@@ -327,16 +385,20 @@ class CPU:
         self._mem_wb_tmp.set_read_data(read_result)
         self._mem_wb_tmp.wb_control = copy.deepcopy(pipeline_data.wb_control)
 
-    def write_back(self):
+    def write_back(self, ex=True):
         pipeline_data = copy.deepcopy(self._mem_wb)
-
-        # set register signals
-        self._register_file.set_register_write(pipeline_data.wb_control.RegWrite)
-        self._register_file.set_write_r(pipeline_data.reg_dest)
 
         if pipeline_data.wb_control.MemToReg:
             write_data = pipeline_data.read_data
         else:
             write_data = pipeline_data.alu_result
+
+        # to be forwarded
+        if not ex:
+            return write_data
+
+        # set register signals
+        self._register_file.set_register_write(pipeline_data.wb_control.RegWrite)
+        self._register_file.set_write_r(pipeline_data.reg_dest)
 
         self._register_file.set_write_data(write_data)

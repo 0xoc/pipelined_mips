@@ -15,12 +15,17 @@ cpu.load_instructions(instructions)
 # 00100000000001000000000000000101
 # cpu._register_file.put(ALU.int_to_n_bit_binary(4, 5), ALU.int_to_n_bit_binary(5))
 
-for j in range(10):
-    cpu.fetch()
-    cpu.decode()
-    cpu.execute()
-    cpu.memory()
-    cpu.write_back()
+for j in range(7):
+    # cpu.fetch()
+    # cpu.decode()
+    # cpu.execute()
+    # cpu.memory()
+    # cpu.write_back()
+
+    if j == 4:
+        print("nice")
+
+    cpu.cycle()
 
     # save result to file
     mem_file.write("Cycle %d\n " % j)
