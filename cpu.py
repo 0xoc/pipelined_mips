@@ -124,7 +124,7 @@ class CPU:
         # memory signals
         self._id_ex_tmp.mem_control.Branch = False
         self._id_ex_tmp.mem_control.MemRead = False
-        self._id_ex.mem_control.MemWrite = False
+        self._id_ex_tmp.mem_control.MemWrite = False
 
         # wb signals
         self._id_ex_tmp.wb_control.MemToReg = False
@@ -140,6 +140,25 @@ class CPU:
         elif op_code_decimal == 4:
             self._id_ex_tmp.mem_control.Branch = False
             self._id_ex_tmp.wb_control.RegWrite = False
+
+    def forwarding_unit(self):
+        result = {}
+        if (self._mem_wb.wb_control.RegWrite
+                and (self._mem_wb.reg_dest != ALU.int_to_n_bit_binary(0, 5))
+                and not (self._ex_mem.wb_control.RegWrite and (self._ex_mem.reg_dest != ALU.int_to_n_bit_binary(0, 5))
+                         and (self._ex_mem.reg_dest != self._id_ex.rs))
+                and (self._mem_wb.reg_dest == self._id_ex.rs)):
+            result['ForwardA'] = True
+
+        if (self._mem_wb.wb_control.RegWrite
+                and (self._mem_wb.reg_dest != ALU.int_to_n_bit_binary(0, 5))
+                and not (self._ex_mem.wb_control.RegWrite and (self._ex_mem.reg_dest != ALU.int_to_n_bit_binary(0, 5))
+                         and (self._ex_mem.reg_dest != self._id_ex.rt))
+                and (self._mem_wb.reg_dest == self._id_ex.rt)):
+
+            result['ForwardB'] = True
+
+        return result
 
     def fetch(self):
 
@@ -189,6 +208,9 @@ class CPU:
             self._register_file.set_read_r1(tuple(rs))
             self._id_ex_tmp.set_rd1(self._register_file.read_d1)
 
+            self._id_ex_tmp.set_rs(tuple(rs))
+            self._id_ex_tmp.set_rt(tuple(rt))
+
             self._register_file.set_read_r2(tuple(rt))
             self._id_ex_tmp.set_rd2(self._register_file.read_d2)
 
@@ -196,7 +218,6 @@ class CPU:
 
         # if R type
         if op_code_decimal == 0:
-
             rd = inst[15:10:-1]
             sh = inst[10:5:-1]
             func = inst[5::-1]
@@ -207,7 +228,9 @@ class CPU:
 
             # ex signals
             self._id_ex_tmp.ex_control.ALUOp = tuple(func)
+
             self._id_ex_tmp.ex_control.ALUSource = 'rt'
+
             self._id_ex_tmp.ex_control.RegDst = 'rd'
 
         # I type

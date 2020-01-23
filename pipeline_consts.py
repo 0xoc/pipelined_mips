@@ -38,6 +38,8 @@ class ID_EX:
         self.pc = ALU.int_to_n_bit_binary(0)
         self.rd1 = ALU.int_to_n_bit_binary(0)
         self.rd2 = ALU.int_to_n_bit_binary(0)
+        self.rs = ALU.int_to_n_bit_binary(0, 5)
+        self.rt = ALU.int_to_n_bit_binary(0, 5)
         self.inst_15_0 = ALU.int_to_n_bit_binary(0, 16)
         self.inst_20_16 = ALU.int_to_n_bit_binary(0, 5)
         self.inst_15_11 = ALU.int_to_n_bit_binary(0, 5)
@@ -49,6 +51,14 @@ class ID_EX:
     def set_pc(self, pc):
         validate_word_tuple(pc)
         self.pc = pc
+
+    def set_rs(self, rs):
+        validate_n_bit_tuple(rs, 5)
+        self.rs = rs
+
+    def set_rt(self, rt):
+        validate_n_bit_tuple(rt, 5)
+        self.rt = rt
 
     def set_rd1(self, rd1):
         validate_word_tuple(rd1)
