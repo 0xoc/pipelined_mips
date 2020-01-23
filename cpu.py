@@ -365,7 +365,7 @@ class CPU:
         self._ex_mem_tmp.set_alu_result(alu_result)
         self._ex_mem_tmp.set_alu_zero_flag(alu_is_zero)
         self._ex_mem_tmp.set_jump_target(jump_target)
-        self._ex_mem_tmp.set_rd2(pipeline_register.rd2)
+        self._ex_mem_tmp.set_rd2(input2)
         self._ex_mem_tmp.set_reg_dest(reg_dest)
 
         # print("ALU RESULT:", ALU.n_bit_binary_to_decimal(alu_result))
