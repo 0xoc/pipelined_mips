@@ -378,8 +378,6 @@ class CPU:
         self._ex_mem_tmp.set_rd2(memory_data)
         self._ex_mem_tmp.set_reg_dest(reg_dest)
 
-        # print("ALU RESULT:", ALU.n_bit_binary_to_decimal(alu_result))
-
     def memory(self):
         # self._mem_wb = copy.deepcopy(self._mem_wb_tmp)
 
@@ -392,7 +390,7 @@ class CPU:
 
         self._mem_wb_tmp.set_alu_result(pipeline_data.alu_result)
         self._mem_wb_tmp.set_reg_dest(pipeline_data.reg_dest)
-        self._mem_wb_tmp.set_read_data(read_result)
+        self._mem_wb_tmp.set_read_data(tuple(read_result))
         self._mem_wb_tmp.wb_control = copy.deepcopy(pipeline_data.wb_control)
 
     def write_back(self, ex=True):
@@ -408,7 +406,5 @@ class CPU:
             return write_data
 
         # set register signals
-        self._register_file.set_register_write(pipeline_data.wb_control.RegWrite)
-        self._register_file.set_write_r(pipeline_data.reg_dest)
-
-        self._register_file.set_write_data(write_data)
+        if pipeline_data.wb_control.RegWrite:
+            self._register_file.put(pipeline_data.reg_dest, write_data)

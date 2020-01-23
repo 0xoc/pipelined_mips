@@ -3,7 +3,7 @@ import tests
 from alu import ALU
 from cpu import CPU
 
-program = open("sw.inst")
+program = open("lw.inst")
 mem_file = open("mem.txt", "w")
 reg_file = open("reg.txt", "w")
 instructions = program.readlines()
