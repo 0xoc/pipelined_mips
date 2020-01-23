@@ -19,8 +19,7 @@ class Memory:
             self.data[ALU.int_to_n_bit_binary(i, addr_size)] = ALU.int_to_n_bit_binary(0, byte_size)
 
         # read write addresses
-        self._read_address = ALU.int_to_n_bit_binary(0, addr_size)
-        self._write_address = ALU.int_to_n_bit_binary(0, addr_size)
+        self._address = ALU.int_to_n_bit_binary(0, addr_size)
 
         self.read_result = ALU.int_to_n_bit_binary(0, byte_size)
         self._write_data = ALU.int_to_n_bit_binary(0, byte_size)
@@ -83,15 +82,15 @@ class Memory:
 
         return byte
 
-    def set_read_address(self, addr):
+    def set_address(self, addr):
         self.validate_addr(addr)
-        self._read_address = addr
+        self._address = addr
 
         self._exc()
 
     def set_write_addr(self, addr):
         self.validate_addr(addr)
-        self._write_address = addr
+        self._address = addr
 
         self._exc()
 
@@ -117,7 +116,7 @@ class Memory:
         :return:
         """
         if self._mem_read:
-            self.read_result = self.at(self._read_address)
+            self.read_result = self.at(self._address)
             return self.read_result
 
     def write(self):
@@ -127,4 +126,4 @@ class Memory:
         """
 
         if self._mem_write:
-            self.put(self._write_address, self._write_data)
+            self.put(self._address, self._write_data)

@@ -3,25 +3,27 @@ import tests
 from alu import ALU
 from cpu import CPU
 
-program = open("program.inst")
+program = open("sw.inst")
+mem_file = open("mem.txt", "w")
+reg_file = open("reg.txt", "w")
 instructions = program.readlines()
 
 cpu = CPU()
 
 cpu.load_instructions(instructions)
 
-cpu._instruction_memory.set_mem_read(True)
-
-cpu._register_file.set_register_write(True)
-cpu._register_file.set_write_r(ALU.int_to_n_bit_binary(5, 5))
-cpu._register_file.set_write_data(ALU.int_to_n_bit_binary(3))
-cpu._register_file.set_register_write(False)
-
-cpu._register_file.set_register_write(True)
-cpu._register_file.set_write_r(ALU.int_to_n_bit_binary(7, 5))
-cpu._register_file.set_write_data(ALU.int_to_n_bit_binary(10))
-cpu._register_file.set_register_write(False)
 
 while cpu.fetch():
     cpu.decode()
-    print(cpu.execute())
+    cpu.execute()
+    cpu.memory()
+    cpu.write_back()
+
+    # save result to file
+    for i in range(0, cpu._data_memory.size, 4):
+        mem_file.write(str(i) + "\t" + str(cpu._load_w(cpu._data_memory, ALU.int_to_n_bit_binary(i))) + "\n")
+
+    for i in range(32):
+        reg_file.write(str(i) + "\t" + str(cpu._register_file.at(ALU.int_to_n_bit_binary(i, 5))) + "\n")
+
+

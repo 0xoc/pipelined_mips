@@ -41,6 +41,10 @@ class ID_EX:
         self.inst_20_16 = ALU.int_to_n_bit_binary(0, 5)
         self.inst_15_11 = ALU.int_to_n_bit_binary(0, 5)
 
+        self.wb_control = WB_CONTROL()
+        self.mem_control = MEM_CONTROL()
+        self.ex_control = EX_CONTROL()
+
     def set_pc(self, pc):
         validate_word_tuple(pc)
         self.pc = pc
@@ -62,21 +66,62 @@ class ID_EX:
         self.inst_20_16 = i
 
     def set_inst_15_11(self, i):
-        validate_n_bit_tuple(i,5)
+        validate_n_bit_tuple(i, 5)
         self.inst_15_11 = i
 
+
 class EX_MEM:
-    JUMP_TARGET = ALU.int_to_n_bit_binary(0, 5)
-    ALU_ZERO_FLAG = ALU.int_to_n_bit_binary(1, 5)
-    ALU_RESULT = ALU.int_to_n_bit_binary(2, 5)
-    RD2 = ALU.int_to_n_bit_binary(3, 5)
-    REG_DEST = ALU.int_to_n_bit_binary(4, 5)
+
+    def __init__(self):
+        self.jump_target = ALU.int_to_n_bit_binary(0)
+        self.alu_zero_flag = True
+        self.alu_result = ALU.int_to_n_bit_binary(0)
+        self.rd2 = ALU.int_to_n_bit_binary(0)
+        self.reg_dest = ALU.int_to_n_bit_binary(0, 5)
+
+        self.wb_control = WB_CONTROL()
+        self.mem_control = MEM_CONTROL()
+
+    def set_jump_target(self, jt):
+        validate_n_bit_tuple(jt, WORD)
+        self.jump_target = jt
+
+    def set_alu_zero_flag(self, alu_zero_flag):
+        self.alu_zero_flag = alu_zero_flag
+
+    def set_alu_result(self, alu_result):
+        validate_n_bit_tuple(alu_result, WORD)
+        self.alu_result = alu_result
+
+    def set_rd2(self, rd2):
+        validate_n_bit_tuple(rd2, WORD)
+        self.rd2 = rd2
+
+    def set_reg_dest(self, reg_dest):
+        validate_n_bit_tuple(reg_dest, 5)
+        self.reg_dest = reg_dest
 
 
 class MEM_WB:
-    ALU_RESULT = ALU.int_to_n_bit_binary(0, 5)
-    READ_DATA = ALU.int_to_n_bit_binary(1, 5)
-    REG_DEST = ALU.int_to_n_bit_binary(2, 5)
+
+    def __init__(self):
+        self.alu_result = ALU.int_to_n_bit_binary(0)
+        self.read_data = ALU.int_to_n_bit_binary(0)
+        self.reg_dest = ALU.int_to_n_bit_binary(0, 5)
+
+        self.wb_control = WB_CONTROL()
+
+    def set_alu_result(self, alu_result):
+        validate_word_tuple(alu_result)
+        self.alu_result = alu_result
+
+    def set_read_data(self, read_data):
+        validate_word_tuple(read_data)
+        self.read_data = read_data
+
+    def set_reg_dest(self, reg_dest):
+        validate_n_bit_tuple(reg_dest, 5)
+        self.reg_dest = reg_dest
 
 
 """

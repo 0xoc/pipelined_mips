@@ -61,7 +61,7 @@ def mem_test():
     mem.set_write_data(ALU.int_to_n_bit_binary(5, BYTE_SIZE))
 
     mem.set_mem_read(True)
-    mem.set_read_address(ALU.int_to_n_bit_binary(0))
+    mem.set_address(ALU.int_to_n_bit_binary(0))
 
     assert mem_result_decimal(mem) == 0
     mem.set_mem_read(False)
