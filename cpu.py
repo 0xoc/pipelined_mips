@@ -194,19 +194,8 @@ class CPU:
         return result
 
     def fetch(self):
-
-        if (
-                self._ex_mem.alu_zero_flag and
-                self._ex_mem.mem_control.Branch
-        ):
-            pcSource = self._ex_mem.jump_target
-            print("pc:", ALU.n_bit_binary_to_decimal(pcSource))
-        else:
-            pcSource = self._pc
-
-        instruction = self._load_w(self._instruction_memory, pcSource)
-
-        self._pc = ALU.n_bit_binary_to_decimal(pcSource) + 4
+        instruction = self._load_w(self._instruction_memory, self._pc)
+        self._pc = ALU.n_bit_binary_to_decimal(self._pc) + 4
         self._pc = ALU.int_to_n_bit_binary(self._pc)
 
         # end of program
@@ -357,6 +346,9 @@ class CPU:
         ) * 4
 
         jump_target = ALU.int_to_n_bit_binary(pc + offset_4)
+
+        if pipeline_register.mem_control.Branch and alu_is_zero:
+            self._pc = jump_target
 
         if pipeline_register.ex_control.RegDst == 'rt':
             reg_dest = pipeline_register.rt

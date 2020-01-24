@@ -144,8 +144,8 @@ class MEM_WB:
 class WB_CONTROL:
 
     def __init__(self):
-        self.MemToReg = 0
-        self.RegWrite = 0
+        self.MemToReg = False
+        self.RegWrite = False
 
 
 class MEM_CONTROL:
