@@ -348,6 +348,8 @@ class CPU:
         jump_target = ALU.int_to_n_bit_binary(pc + offset_4)
 
         if pipeline_register.mem_control.Branch and alu_is_zero:
+            self._id_ex_tmp = ID_EX()
+            self._if_id_tmp = IF_ID()
             self._pc = jump_target
 
         if pipeline_register.ex_control.RegDst == 'rt':
